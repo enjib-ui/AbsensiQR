@@ -268,6 +268,8 @@ function startScanner() {
           const s = docSnap.data();
           qs("#scan-result").textContent = `✅ ${s.nama} (${s.kelas} - ${s.sekolah}) discan pada ${new Date().toLocaleString()}`;
           found = true;
+          // Tampilkan alert scan berhasil
+          alert(`Scan berhasil: ${s.nama} (${s.kelas} - ${s.sekolah})`);
           await addDoc(
             collection(
               db,
