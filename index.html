@@ -30,6 +30,24 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    import { onAuthStateChanged } 
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+// Cek status login setiap kali halaman load / refresh
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    currentUser = user;
+    authWrap.style.display = "none";
+    dashboard.style.display = "flex";
+    loadTable();
+  } else {
+    currentUser = null;
+    authWrap.style.display = "grid";
+    dashboard.style.display = "none";
+  }
+});
+  
+
     // ===== DOM =====
     const qs = s => document.querySelector(s);
     const loginForm = qs("#form-login");
