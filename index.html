@@ -4,289 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Aplikasi Absensi Guru - Firebase</title>
+
+  <!-- Library eksternal -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  
-  <!-- Firebase SDK -->
-  <script type="module">
-    // Import SDK
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } 
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, onSnapshot } 
-      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // Config Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyCu8ZCpTGTFPcrpJDYn0BB8GHoP0hYvg_Q",
-      authDomain: "absensiqr-a623d.firebaseapp.com",
-      projectId: "absensiqr-a623d",
-      storageBucket: "absensiqr-a623d.firebasestorage.app",
-      messagingSenderId: "550764914493",
-      appId: "1:550764914493:web:8f9c8515a78b2837a0c754"
-    };
-
-    // Init
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    import { onAuthStateChanged } 
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-// Cek status login setiap kali halaman load / refresh
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    currentUser = user;
-    authWrap.style.display = "none";
-    dashboard.style.display = "flex";
-    loadTable();
-  } else {
-    currentUser = null;
-    authWrap.style.display = "grid";
-    dashboard.style.display = "none";
-  }
-});
-  
-
-    // ===== DOM =====
-    const qs = s => document.querySelector(s);
-    const loginForm = qs("#form-login");
-    const registerForm = qs("#form-register");
-    const loginMsg = qs("#login-msg");
-    const regMsg = qs("#reg-msg");
-    const dashboard = qs("#dashboard");
-    const authWrap = qs("#auth-wrap");
-    const siswaForm = qs("#form-siswa");
-    const tabelBody = qs("#tabel-siswa tbody");
-
-    let currentUser = null;
-
-    // ===== REGISTER =====
-    registerForm.addEventListener("submit", async e => {
-      e.preventDefault();
-      const nama = qs("#reg-nama").value.trim();
-      const email = qs("#reg-email").value.trim();
-      const password = qs("#reg-password").value;
-      try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        regMsg.textContent = "Pendaftaran berhasil, silakan login.";
-        registerForm.reset();
-      } catch (err) {
-        regMsg.textContent = err.message;
-      }
-    });
-
-    // ===== LOGIN =====
-    loginForm.addEventListener("submit", async e => {
-      e.preventDefault();
-      const email = qs("#login-email").value.trim();
-      const password = qs("#login-password").value;
-      try {
-        const userCred = await signInWithEmailAndPassword(auth, email, password);
-        currentUser = userCred.user;
-        authWrap.style.display = "none";
-        dashboard.style.display = "flex";
-        loadTable();
-      } catch (err) {
-        loginMsg.textContent = "Login gagal: " + err.message;
-      }
-    });
-
-    // ===== LOGOUT =====
-    qs("#btn-logout").onclick = async () => {
-      await signOut(auth);
-      currentUser = null;
-      dashboard.style.display = "none";
-      authWrap.style.display = "grid";
-    };
-
-    // ===== SISWA =====
-    siswaForm.addEventListener("submit", async e => {
-      e.preventDefault();
-      const nama = qs("#siswa-nama").value.trim();
-      const kelas = qs("#siswa-kelas").value.trim();
-      const sekolah = qs("#siswa-sekolah").value.trim();
-      const kode = currentUser.uid + "_S" + Date.now();
-      try {
-        await addDoc(collection(db, "users", currentUser.uid, "siswa"), {
-          nama, kelas, sekolah, kode
-        });
-        siswaForm.reset();
-      } catch (err) {
-        alert("Gagal tambah siswa: " + err.message);
-      }
-    });
-
-    async function loadTable() {
-      tabelBody.innerHTML = "";
-      const q = collection(db, "users", currentUser.uid, "siswa");
-      onSnapshot(q, snap => {
-        tabelBody.innerHTML = "";
-        snap.forEach(doc => {
-          const s = doc.data();
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${s.kode}</td>
-            <td>${s.nama}</td>
-            <td>${s.kelas}</td>
-            <td>${s.sekolah}</td>
-            <td id="qr-${s.kode}"></td>`;
-          tabelBody.appendChild(tr);
-          new QRCode(document.getElementById(`qr-${s.kode}`), { text: s.kode, width:64, height:64 });
-        });
-      });
-    }
-    // ===== EKSPOR PDF =====
-qs("#btn-export-pdf").onclick = async () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  const siswaCol = collection(db, "users", currentUser.uid, "siswa");
-  const siswaSnap = await getDocs(siswaCol);
-
-  let y = 20;
-  doc.setFontSize(14);
-  doc.text("Daftar Siswa dengan QR Code", 14, y);
-  y += 10;
-
-  for (let siswa of siswaSnap.docs) {
-    const s = siswa.data();
-    doc.setFontSize(12);
-    doc.text(`Nama   : ${s.nama}`, 14, y); y += 6;
-    doc.text(`Kelas  : ${s.kelas}`, 14, y); y += 6;
-    doc.text(`Sekolah: ${s.sekolah}`, 14, y); y += 6;
-
-    // Generate QR code ke <canvas> sementara
-    const qrCanvas = document.createElement("canvas");
-    new QRCode(qrCanvas, { text: s.kode, width: 64, height: 64 });
-    const qrImg = qrCanvas.querySelector("img") || qrCanvas.querySelector("canvas");
-    if (qrImg) {
-      const imgData = qrImg.toDataURL ? qrImg.toDataURL("image/png") : qrImg.src;
-      doc.addImage(imgData, "PNG", 150, y - 18, 30, 30);
-    }
-
-    y += 40;
-    if (y > 270) { // halaman penuh
-      doc.addPage();
-      y = 20;
-    }
-  }
-
-  doc.save("Daftar_Siswa.pdf");
-};
-    
-    async function loadAbsensi() {
-  const absensiTableBody = document.getElementById("absensiTableBody");
-  absensiTableBody.innerHTML = "";
-
-  const siswaCol = collection(db, "users", currentUser.uid, "siswa");
-  const siswaSnap = await getDocs(siswaCol);
-
-  for (let siswaDoc of siswaSnap.docs) {
-    const siswaData = siswaDoc.data();
-    const absensiCol = collection(db, "users", currentUser.uid, "siswa", siswaDoc.id, "absensi");
-    const absensiSnap = await getDocs(absensiCol);
-
-    absensiSnap.forEach(absen => {
-      const absenData = absen.data();
-      absensiTableBody.innerHTML += `
-        <tr>
-          <td>${siswaData.nama}</td>
-          <td>${siswaData.kelas}</td>
-          <td>${siswaData.sekolah}</td>
-          <td>${new Date(absenData.waktu.toDate()).toLocaleString()}</td>
-        </tr>`;
-    });
-  }
-    }
-    
-
-    // ===== MENU SLIDE =====
-    const menuTambah = qs("#menu-tambah");
-    const menuScan = qs("#menu-scan");
-    const panelTambah = qs("#panel-tambah");
-    const panelScan = qs("#panel-scan");
-    const menuAbsensi = qs("#menu-absensi");
-    const panelAbsensi = qs("#panel-absensi");
-    
-
-    menuTambah.onclick = ()=>{
-      menuTambah.classList.add("active"); menuScan.classList.remove("active");
-      panelTambah.style.display="block"; panelScan.style.display="none";
-    };
-    menuScan.onclick = ()=>{
-      menuScan.classList.add("active"); menuTambah.classList.remove("active");
-      panelTambah.style.display="none"; panelScan.style.display="block";
-      startScanner();
-    };
-    menuAbsensi.onclick = ()=>{
-  menuAbsensi.classList.add("active");
-  menuTambah.classList.remove("active");
-  menuScan.classList.remove("active");
-  panelTambah.style.display="none";
-  panelScan.style.display="none";
-  panelAbsensi.style.display="block";
-  loadAbsensi();
-};
-    
-
-    // ===== QR SCAN =====
-    let html5QrCode = null;
-    function startScanner(){
-      if(html5QrCode) return;
-      html5QrCode = new Html5Qrcode("qr-reader");
-      html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async qrCodeMessage => {
-        const q = collection(db, "users", currentUser.uid, "siswa");
-        const snap = await getDocs(q);
-        let found = false;
-        snap.forEach(doc => {
-          if(doc.data().kode === qrCodeMessage){
-            const s = doc.data();
-            qs("#scan-result").textContent = `✅ ${s.nama} (${s.kelas} - ${s.sekolah}) discan pada ${new Date().toLocaleString()}`;
-            found = true;
-            // Simpan absensi ke Firestore
-await addDoc(collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi"), {
-  waktu: new Date(),
-  status: "Hadir"
-});
-            
-          }
-        });
-        if(!found) qs("#scan-result").textContent = "❌ QR tidak dikenali";
-      });
-    }
-  </script>
-  <style>
-    :root{
-      --bg:#0f1724; --card:#0b1220; --accent:#06b6d4; --muted:#94a3b8; --radius:14px;
-      --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:var(--font-sans);background:linear-gradient(180deg,#07101a 0%, #071826 60%);color:#e6eef6}
-    .wrap{min-height:100vh;display:grid;place-items:center;padding:28px}
-    .card{width:420px;max-width:96vw;background:rgba(255,255,255,0.03);border-radius:var(--radius);box-shadow:0 10px 30px rgba(2,6,23,0.6);overflow:hidden;padding:28px}
-    h2{text-align:center;margin-top:0}
-    label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px;margin-top:12px}
-    input{padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.05);background:transparent;color:inherit;outline:none}
-    .btn{margin-top:18px;background:var(--accent);border:0;padding:10px 14px;border-radius:10px;color:#021024;font-weight:700;cursor:pointer;width:100%}
-    .muted{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
-    .switch{display:flex;justify-content:center;gap:8px;margin-bottom:12px}
-    .switch button{padding:8px 14px;border-radius:999px;border:0;cursor:pointer;background:transparent;color:var(--muted)}
-    .switch button.active{background:var(--accent);color:#021024;font-weight:700}
-    .dashboard{display:flex;height:100vh}
-    .sidebar{width:220px;background:#0b1220;padding:18px;display:flex;flex-direction:column;gap:10px}
-    .sidebar button{padding:10px;border-radius:8px;background:transparent;color:#e6eef6;text-align:left;border:0;cursor:pointer}
-    .sidebar button.active{background:var(--accent);color:#021024;font-weight:700}
-    .content{flex:1;padding:20px;overflow:auto}
-    .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
-    table{width:100%;border-collapse:collapse;margin-top:18px}
-    th,td{border:1px solid rgba(255,255,255,0.08);padding:8px;text-align:left}
-    th{background:rgba(255,255,255,0.06)}
-    td canvas{display:block;margin:auto}
-    #qr-reader{width:100%}
-  </style>
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- Login / Register -->
@@ -294,8 +19,14 @@ await addDoc(collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi"
     <div class="card">
       <h2>Aplikasi Absensi Guru</h2>
       <div class="switch">
-        <button id="btn-login" class="active" onclick="document.getElementById('form-login').style.display='block';document.getElementById('form-register').style.display='none';this.classList.add('active');document.getElementById('btn-register').classList.remove('active');">Login</button>
-        <button id="btn-register" onclick="document.getElementById('form-register').style.display='block';document.getElementById('form-login').style.display='none';this.classList.add('active');document.getElementById('btn-login').classList.remove('active');">Daftar</button>
+        <button id="btn-login" class="active"
+          onclick="document.getElementById('form-login').style.display='block';document.getElementById('form-register').style.display='none';this.classList.add('active');document.getElementById('btn-register').classList.remove('active');">
+          Login
+        </button>
+        <button id="btn-register"
+          onclick="document.getElementById('form-register').style.display='block';document.getElementById('form-login').style.display='none';this.classList.add('active');document.getElementById('btn-login').classList.remove('active');">
+          Daftar
+        </button>
       </div>
 
       <form id="form-login">
@@ -310,9 +41,6 @@ await addDoc(collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi"
       </form>
 
       <form id="form-register" style="display:none">
-        <label>Nama Lengkap
-          <input id="reg-nama" required />
-        </label>
         <label>Email
           <input id="reg-email" type="email" required />
         </label>
@@ -329,7 +57,6 @@ await addDoc(collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi"
   <div class="dashboard" id="dashboard" style="display:none">
     <div class="sidebar">
       <button id="menu-tambah" class="active">Tambah Siswa</button>
-      <button id="btn-export-pdf" class="btn" style="margin-top:12px">Ekspor PDF</button>
       <button id="menu-scan">Scan QR</button>
       <button id="menu-absensi">📋 Daftar Absensi</button>
       <button id="btn-logout">Keluar</button>
@@ -365,6 +92,8 @@ await addDoc(collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi"
           </thead>
           <tbody></tbody>
         </table>
+        <!-- Tombol ekspor PDF -->
+        <button id="btn-export-pdf" class="btn" style="margin-top:12px">Ekspor PDF</button>
       </div>
 
       <!-- Scan QR -->
@@ -373,22 +102,26 @@ await addDoc(collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi"
         <div id="qr-reader"></div>
         <div id="scan-result" class="muted" style="margin-top:12px"></div>
       </div>
+
       <!-- Daftar Absensi -->
-<div id="panel-absensi" style="display:none">
-  <h2>Daftar Absensi</h2>
-  <table border="1" cellpadding="6" cellspacing="0">
-    <thead>
-      <tr>
-        <th>Nama</th>
-        <th>Kelas</th>
-        <th>Sekolah</th>
-        <th>Waktu Scan</th>
-      </tr>
-    </thead>
-    <tbody id="absensiTableBody"></tbody>
-  </table>
-</div>
+      <div id="panel-absensi" style="display:none">
+        <h2>Daftar Absensi</h2>
+        <table border="1" cellpadding="6" cellspacing="0">
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>Kelas</th>
+              <th>Sekolah</th>
+              <th>Waktu Scan</th>
+            </tr>
+          </thead>
+          <tbody id="absensiTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
+
+  <!-- JS -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
