@@ -206,7 +206,7 @@ onAuthStateChanged(auth, (user) => {
             qs("#scan-result").textContent = `✅ ${s.nama} (${s.kelas} - ${s.sekolah}) discan pada ${new Date().toLocaleString()}`;
             found = true;
             // Simpan absensi ke Firestore
-await addDoc(collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi"), {
+await addDoc(collection(db, "users", currentUser.uid, "siswa", siswaDoc.id, "absensi"), {
   waktu: new Date(),
   status: "Hadir"
 });
