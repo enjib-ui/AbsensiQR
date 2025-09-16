@@ -6,6 +6,8 @@
   <title>Aplikasi Absensi Guru - Firebase</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
   <!-- Firebase SDK -->
   <script type="module">
     // Import SDK
@@ -136,6 +138,45 @@ onAuthStateChanged(auth, (user) => {
         });
       });
     }
+    // ===== EKSPOR PDF =====
+qs("#btn-export-pdf").onclick = async () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const siswaCol = collection(db, "users", currentUser.uid, "siswa");
+  const siswaSnap = await getDocs(siswaCol);
+
+  let y = 20;
+  doc.setFontSize(14);
+  doc.text("Daftar Siswa dengan QR Code", 14, y);
+  y += 10;
+
+  for (let siswa of siswaSnap.docs) {
+    const s = siswa.data();
+    doc.setFontSize(12);
+    doc.text(`Nama   : ${s.nama}`, 14, y); y += 6;
+    doc.text(`Kelas  : ${s.kelas}`, 14, y); y += 6;
+    doc.text(`Sekolah: ${s.sekolah}`, 14, y); y += 6;
+
+    // Generate QR code ke <canvas> sementara
+    const qrCanvas = document.createElement("canvas");
+    new QRCode(qrCanvas, { text: s.kode, width: 64, height: 64 });
+    const qrImg = qrCanvas.querySelector("img") || qrCanvas.querySelector("canvas");
+    if (qrImg) {
+      const imgData = qrImg.toDataURL ? qrImg.toDataURL("image/png") : qrImg.src;
+      doc.addImage(imgData, "PNG", 150, y - 18, 30, 30);
+    }
+
+    y += 40;
+    if (y > 270) { // halaman penuh
+      doc.addPage();
+      y = 20;
+    }
+  }
+
+  doc.save("Daftar_Siswa.pdf");
+};
+    
     async function loadAbsensi() {
   const absensiTableBody = document.getElementById("absensiTableBody");
   absensiTableBody.innerHTML = "";
@@ -288,6 +329,7 @@ await addDoc(collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi"
   <div class="dashboard" id="dashboard" style="display:none">
     <div class="sidebar">
       <button id="menu-tambah" class="active">Tambah Siswa</button>
+      <button id="btn-export-pdf" class="btn" style="margin-top:12px">Ekspor PDF</button>
       <button id="menu-scan">Scan QR</button>
       <button id="menu-absensi">📋 Daftar Absensi</button>
       <button id="btn-logout">Keluar</button>
