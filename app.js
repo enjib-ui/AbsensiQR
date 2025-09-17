@@ -34,7 +34,6 @@ let currentUser = null;
 
 // ===== DOM Helper =====
 const qs = (s) => document.querySelector(s);
-
 const loginForm = qs("#form-login");
 const registerForm = qs("#form-register");
 const loginMsg = qs("#login-msg");
@@ -44,7 +43,7 @@ const authWrap = qs("#auth-wrap");
 const siswaForm = qs("#form-siswa");
 const tabelBody = qs("#tabel-siswa tbody");
 
-// ===== Cek status login =====
+// ===== Auth State =====
 onAuthStateChanged(auth, (user) => {
   if (user) {
     currentUser = user;
@@ -61,7 +60,6 @@ onAuthStateChanged(auth, (user) => {
 // ===== REGISTER =====
 registerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const nama = qs("#reg-nama").value.trim();
   const email = qs("#reg-email").value.trim();
   const password = qs("#reg-password").value;
   try {
@@ -97,7 +95,7 @@ qs("#btn-logout").onclick = async () => {
   authWrap.style.display = "grid";
 };
 
-// ===== TAMBAH SISWA =====
+// ===== Tambah Siswa =====
 siswaForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const nama = qs("#siswa-nama").value.trim();
@@ -109,7 +107,7 @@ siswaForm.addEventListener("submit", async (e) => {
       nama,
       kelas,
       sekolah,
-      kode
+      kode,
     });
     siswaForm.reset();
   } catch (err) {
@@ -117,7 +115,7 @@ siswaForm.addEventListener("submit", async (e) => {
   }
 });
 
-// ===== MUAT TABEL SISWA =====
+// ===== Load Tabel Siswa =====
 async function loadTable() {
   tabelBody.innerHTML = "";
   const q = collection(db, "users", currentUser.uid, "siswa");
@@ -133,17 +131,19 @@ async function loadTable() {
         <td>${s.sekolah}</td>
         <td id="qr-${s.kode}"></td>`;
       tabelBody.appendChild(tr);
-      new QRCode(document.getElementById(`qr-${s.kode}`), {
-        text: s.kode,
-        width: 64,
-        height: 64
-      });
+
+      // Generate QR ke canvas agar bisa diambil base64
+      const qrContainer = document.getElementById(`qr-${s.kode}`);
+      qrContainer.innerHTML = "";
+      const qrCanvas = document.createElement("canvas");
+      qrContainer.appendChild(qrCanvas);
+      new QRCode(qrCanvas, { text: s.kode, width: 64, height: 64 });
     });
   });
 }
 
-// ===== EKSPOR PDF =====
-document.getElementById("btn-export-pdf").addEventListener("click", async () => {
+// ===== Ekspor PDF =====
+qs("#btn-export-pdf").onclick = async () => {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
@@ -158,16 +158,19 @@ document.getElementById("btn-export-pdf").addEventListener("click", async () => 
   for (let siswa of siswaSnap.docs) {
     const s = siswa.data();
     doc.setFontSize(12);
-    doc.text(`Nama   : ${s.nama}`, 14, y); y += 6;
-    doc.text(`Kelas  : ${s.kelas}`, 14, y); y += 6;
-    doc.text(`Sekolah: ${s.sekolah}`, 14, y); y += 6;
+    doc.text(`Nama   : ${s.nama}`, 14, y);
+    y += 6;
+    doc.text(`Kelas  : ${s.kelas}`, 14, y);
+    y += 6;
+    doc.text(`Sekolah: ${s.sekolah}`, 14, y);
+    y += 6;
 
-    // Generate QR code di canvas sementara
-    const qrCanvas = document.createElement("canvas");
-    new QRCode(qrCanvas, { text: s.kode, width: 64, height: 64 });
-    const qrEl = qrCanvas.querySelector("canvas");
-    if (qrEl) {
-      const imgData = qrEl.toDataURL("image/png");
+    // Ambil QR dari tabel (canvas)
+    const qrCanvas = document
+      .getElementById(`qr-${s.kode}`)
+      .querySelector("canvas");
+    if (qrCanvas) {
+      const imgData = qrCanvas.toDataURL("image/png");
       doc.addImage(imgData, "PNG", 150, y - 18, 30, 30);
     }
 
@@ -179,83 +182,14 @@ document.getElementById("btn-export-pdf").addEventListener("click", async () => 
   }
 
   doc.save("Daftar_Siswa.pdf");
-});
-
-// ===== MUAT ABSENSI =====
-async function loadAbsensi() {
-  const absensiTableBody = document.getElementById("absensiTableBody");
-  absensiTableBody.innerHTML = "";
-
-  const siswaCol = collection(db, "users", currentUser.uid, "siswa");
-  const siswaSnap = await getDocs(siswaCol);
-
-  for (let siswaDoc of siswaSnap.docs) {
-    const siswaData = siswaDoc.data();
-    const absensiCol = collection(
-      db,
-      "users",
-      currentUser.uid,
-      "siswa",
-      siswaDoc.id,
-      "absensi"
-    );
-    const absensiSnap = await getDocs(absensiCol);
-
-    absensiSnap.forEach((absen) => {
-      const absenData = absen.data();
-      absensiTableBody.innerHTML += `
-        <tr>
-          <td>${siswaData.nama}</td>
-          <td>${siswaData.kelas}</td>
-          <td>${siswaData.sekolah}</td>
-          <td>${new Date(absenData.waktu.toDate()).toLocaleString()}</td>
-        </tr>`;
-    });
-  }
-}
-
-// ===== NAVIGASI MENU =====
-const menuTambah = qs("#menu-tambah");
-const menuScan = qs("#menu-scan");
-const menuAbsensi = qs("#menu-absensi");
-const panelTambah = qs("#panel-tambah");
-const panelScan = qs("#panel-scan");
-const panelAbsensi = qs("#panel-absensi");
-
-menuTambah.onclick = () => {
-  menuTambah.classList.add("active");
-  menuScan.classList.remove("active");
-  menuAbsensi.classList.remove("active");
-  panelTambah.style.display = "block";
-  panelScan.style.display = "none";
-  panelAbsensi.style.display = "none";
 };
 
-menuScan.onclick = () => {
-  menuScan.classList.add("active");
-  menuTambah.classList.remove("active");
-  menuAbsensi.classList.remove("active");
-  panelTambah.style.display = "none";
-  panelScan.style.display = "block";
-  panelAbsensi.style.display = "none";
-  startScanner();
-};
-
-menuAbsensi.onclick = () => {
-  menuAbsensi.classList.add("active");
-  menuTambah.classList.remove("active");
-  menuScan.classList.remove("active");
-  panelTambah.style.display = "none";
-  panelScan.style.display = "none";
-  panelAbsensi.style.display = "block";
-  loadAbsensi();
-};
-
-// ===== QR SCANNER =====
+// ===== QR SCAN =====
 let html5QrCode = null;
 function startScanner() {
   if (html5QrCode) return;
   html5QrCode = new Html5Qrcode("qr-reader");
+
   html5QrCode.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
@@ -263,30 +197,35 @@ function startScanner() {
       const q = collection(db, "users", currentUser.uid, "siswa");
       const snap = await getDocs(q);
       let found = false;
-      snap.forEach(async (docSnap) => {
-        if (docSnap.data().kode === qrCodeMessage) {
-          const s = docSnap.data();
-          qs("#scan-result").textContent = `✅ ${s.nama} (${s.kelas} - ${s.sekolah}) discan pada ${new Date().toLocaleString()}`;
+
+      snap.forEach(async (doc) => {
+        if (doc.data().kode === qrCodeMessage) {
+          const s = doc.data();
           found = true;
-          // Tampilkan alert scan berhasil
-          alert(`Scan berhasil: ${s.nama} (${s.kelas} - ${s.sekolah})`);
-          await addDoc(
-            collection(
-              db,
-              "users",
-              currentUser.uid,
-              "siswa",
-              docSnap.id,
-              "absensi"
-            ),
-            {
-              waktu: new Date(),
-              status: "Hadir"
-            }
-          );
+
+          // 🔽 Simpan absensi ke Firestore
+          await addDoc(collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi"), {
+            waktu: new Date(),
+            status: "Hadir"
+          });
+
+          // 🔽 Tampilkan alert
+          alert(`✅ Scan berhasil: ${s.nama} (${s.kelas} - ${s.sekolah})`);
+
+          // 🔽 Tambahkan data ke tabel absensi realtime di bawah kamera
+          const absenTable = document.getElementById("absensiScanTableBody");
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${s.nama}</td>
+            <td>${s.kelas}</td>
+            <td>${s.sekolah}</td>
+            <td>${new Date().toLocaleString()}</td>
+          `;
+          absenTable.prepend(tr);
         }
       });
+
       if (!found) qs("#scan-result").textContent = "❌ QR tidak dikenali";
     }
   );
-      }
+}
