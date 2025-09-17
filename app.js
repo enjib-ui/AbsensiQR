@@ -158,12 +158,9 @@ qs("#btn-export-pdf").onclick = async () => {
   for (let siswa of siswaSnap.docs) {
     const s = siswa.data();
     doc.setFontSize(12);
-    doc.text(`Nama   : ${s.nama}`, 14, y);
-    y += 6;
-    doc.text(`Kelas  : ${s.kelas}`, 14, y);
-    y += 6;
-    doc.text(`Sekolah: ${s.sekolah}`, 14, y);
-    y += 6;
+    doc.text(`Nama   : ${s.nama}`, 14, y); y += 6;
+    doc.text(`Kelas  : ${s.kelas}`, 14, y); y += 6;
+    doc.text(`Sekolah: ${s.sekolah}`, 14, y); y += 6;
 
     // Ambil QR dari tabel (canvas)
     const qrCanvas = document
@@ -184,6 +181,32 @@ qs("#btn-export-pdf").onclick = async () => {
   doc.save("Daftar_Siswa.pdf");
 };
 
+// ===== Load Absensi =====
+async function loadAbsensi() {
+  const absensiTableBody = document.getElementById("absensiTableBody");
+  absensiTableBody.innerHTML = "";
+
+  const siswaCol = collection(db, "users", currentUser.uid, "siswa");
+  const siswaSnap = await getDocs(siswaCol);
+
+  for (let siswaDoc of siswaSnap.docs) {
+    const siswaData = siswaDoc.data();
+    const absensiCol = collection(db, "users", currentUser.uid, "siswa", siswaDoc.id, "absensi");
+    const absensiSnap = await getDocs(absensiCol);
+
+    absensiSnap.forEach(absen => {
+      const absenData = absen.data();
+      absensiTableBody.innerHTML += `
+        <tr>
+          <td>${siswaData.nama}</td>
+          <td>${siswaData.kelas}</td>
+          <td>${siswaData.sekolah}</td>
+          <td>${new Date(absenData.waktu.toDate()).toLocaleString()}</td>
+        </tr>`;
+    });
+  }
+}
+
 // ===== QR SCAN =====
 let html5QrCode = null;
 function startScanner() {
@@ -203,25 +226,27 @@ function startScanner() {
           const s = doc.data();
           found = true;
 
-          // 🔽 Simpan absensi ke Firestore
+          // Simpan absensi ke Firestore
           await addDoc(collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi"), {
             waktu: new Date(),
             status: "Hadir"
           });
 
-          // 🔽 Tampilkan alert
+          // Tampilkan alert
           alert(`✅ Scan berhasil: ${s.nama} (${s.kelas} - ${s.sekolah})`);
 
-          // 🔽 Tambahkan data ke tabel absensi realtime di bawah kamera
+          // Tambahkan data ke tabel absensi realtime di bawah kamera
           const absenTable = document.getElementById("absensiScanTableBody");
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${s.nama}</td>
-            <td>${s.kelas}</td>
-            <td>${s.sekolah}</td>
-            <td>${new Date().toLocaleString()}</td>
-          `;
-          absenTable.prepend(tr);
+          if (absenTable) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${s.nama}</td>
+              <td>${s.kelas}</td>
+              <td>${s.sekolah}</td>
+              <td>${new Date().toLocaleString()}</td>
+            `;
+            absenTable.prepend(tr);
+          }
         }
       });
 
@@ -229,3 +254,46 @@ function startScanner() {
     }
   );
 }
+
+// ===== MENU SLIDE =====
+const menuTambah = qs("#menu-tambah");
+const menuScan = qs("#menu-scan");
+const menuAbsensi = qs("#menu-absensi");
+
+const panelTambah = qs("#panel-tambah");
+const panelScan = qs("#panel-scan");
+const panelAbsensi = qs("#panel-absensi");
+
+menuTambah.onclick = () => {
+  menuTambah.classList.add("active");
+  menuScan.classList.remove("active");
+  menuAbsensi.classList.remove("active");
+
+  panelTambah.style.display = "block";
+  panelScan.style.display = "none";
+  panelAbsensi.style.display = "none";
+};
+
+menuScan.onclick = () => {
+  menuScan.classList.add("active");
+  menuTambah.classList.remove("active");
+  menuAbsensi.classList.remove("active");
+
+  panelTambah.style.display = "none";
+  panelScan.style.display = "block";
+  panelAbsensi.style.display = "none";
+
+  startScanner();
+};
+
+menuAbsensi.onclick = () => {
+  menuAbsensi.classList.add("active");
+  menuTambah.classList.remove("active");
+  menuScan.classList.remove("active");
+
+  panelTambah.style.display = "none";
+  panelScan.style.display = "none";
+  panelAbsensi.style.display = "block";
+
+  loadAbsensi();
+};
