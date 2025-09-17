@@ -51,3 +51,26 @@ th{background:transparent;font-weight:700;color:var(--muted)}
   .content{padding:10px}
   .auth-card{width:95%}
 }
+/* ===== Toast Notification ===== */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  z-index: 2000;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast.success { border-left: 6px solid #22c55e; }
+.toast.danger { border-left: 6px solid #ef4444; }
