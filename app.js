@@ -202,48 +202,37 @@ async function startScanner(){
       let matchedDoc = null;
       snap.forEach(d=>{ if(d.data().kode === qrMessage) matchedDoc = d; });
       if(matchedDoc){
-        const s = matchedDoc.data();
-        // save attendance under siswa doc
-        try{
-         // 🔽 Simpan absensi ke Firestore (cek double dulu)
-const absensiCol = collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi");
+      if(matchedDoc){
+  const s = matchedDoc.data();
 
-// Batas awal & akhir hari (untuk filter tanggal)
-const now = new Date();
-const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  // 🔽 Cek absensi terakhir dulu
+  const absensiCol = collection(db, 'users', currentUser.uid, 'siswa', matchedDoc.id, 'absensi');
+  const absensiSnap = await getDocs(absensiCol);
 
-// Query absensi hari ini
-const qAbsensi = query(absensiCol,
-  where("waktu", ">=", startOfDay),
-  where("waktu", "<=", endOfDay)
-);
-
-const snapAbsensi = await getDocs(qAbsensi);
-
-if (!snapAbsensi.empty) {
-  // Sudah ada absen hari ini
-  showToast(`⚠️ ${s.nama} sudah absen hari ini`, "warning");
-} else {
-  // Belum ada, simpan baru
-  await addDoc(absensiCol, {
-    waktu: now,
-    status: "Hadir"
+  let sudahHadir = false;
+  const today = new Date().toDateString();
+  absensiSnap.forEach(a => {
+    const ad = a.data();
+    const waktu = ad.waktu && ad.waktu.toDate ? ad.waktu.toDate() : ad.waktu;
+    if(new Date(waktu).toDateString() === today){
+      sudahHadir = true;
+    }
   });
 
-  showToast(`✅ Scan berhasil: ${s.nama} (${s.kelas} - ${s.sekolah})`, "success");
+  if(sudahHadir){
+    showToast(`❗ ${s.nama} sudah absen hari ini`, {type:'danger', duration:2500});
+  } else {
+    // Simpan absensi baru
+    await addDoc(absensiCol, { waktu: new Date(), status: 'Hadir' });
+    showToast('✅ Scan berhasil: '+s.nama, {type:'success', duration:2500});
 
-  // Tambahkan ke tabel realtime (langsung terlihat di bawah kamera)
-  const absenTable = document.getElementById("absensiScanTableBody");
-  const tr = document.createElement("tr");
-  tr.innerHTML = `
-    <td>${s.nama}</td>
-    <td>${s.kelas}</td>
-    <td>${s.sekolah}</td>
-    <td>${now.toLocaleString()}</td>
-  `;
-  absenTable.prepend(tr);
-}
+    // Update tabel kecil absensi
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${s.nama}</td><td>${s.kelas}</td><td>${s.sekolah}</td><td>${new Date().toLocaleString()}</td>`;
+    absensiScanTableBody.prepend(tr);
+  }
+      }
+        
           
 }
 
