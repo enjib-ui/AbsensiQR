@@ -4,14 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Aplikasi Absensi Guru - Firebase</title>
-
-  <!-- Library eksternal -->
+  <!-- QR Code & Scanner -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <!-- jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
   <!-- CSS -->
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <!-- Login / Register -->
@@ -20,11 +19,17 @@
       <h2>Aplikasi Absensi Guru</h2>
       <div class="switch">
         <button id="btn-login" class="active"
-          onclick="document.getElementById('form-login').style.display='block';document.getElementById('form-register').style.display='none';this.classList.add('active');document.getElementById('btn-register').classList.remove('active');">
+          onclick="document.getElementById('form-login').style.display='block';
+                   document.getElementById('form-register').style.display='none';
+                   this.classList.add('active');
+                   document.getElementById('btn-register').classList.remove('active');">
           Login
         </button>
         <button id="btn-register"
-          onclick="document.getElementById('form-register').style.display='block';document.getElementById('form-login').style.display='none';this.classList.add('active');document.getElementById('btn-login').classList.remove('active');">
+          onclick="document.getElementById('form-register').style.display='block';
+                   document.getElementById('form-login').style.display='none';
+                   this.classList.add('active');
+                   document.getElementById('btn-login').classList.remove('active');">
           Daftar
         </button>
       </div>
@@ -57,6 +62,7 @@
   <div class="dashboard" id="dashboard" style="display:none">
     <div class="sidebar">
       <button id="menu-tambah" class="active">Tambah Siswa</button>
+      <button id="btn-export-pdf" class="btn">Ekspor PDF</button>
       <button id="menu-scan">Scan QR</button>
       <button id="menu-absensi">📋 Daftar Absensi</button>
       <button id="btn-logout">Keluar</button>
@@ -92,8 +98,6 @@
           </thead>
           <tbody></tbody>
         </table>
-        <!-- Tombol ekspor PDF -->
-        <button id="btn-export-pdf" class="btn" style="margin-top:12px">Ekspor PDF</button>
       </div>
 
       <!-- Scan QR -->
@@ -101,6 +105,19 @@
         <h2>Scan QR Siswa</h2>
         <div id="qr-reader"></div>
         <div id="scan-result" class="muted" style="margin-top:12px"></div>
+
+        <h3>Daftar Absensi (Realtime Scan)</h3>
+        <table border="1" cellpadding="6" cellspacing="0">
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>Kelas</th>
+              <th>Sekolah</th>
+              <th>Waktu Scan</th>
+            </tr>
+          </thead>
+          <tbody id="absensiScanTableBody"></tbody>
+        </table>
       </div>
 
       <!-- Daftar Absensi -->
