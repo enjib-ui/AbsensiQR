@@ -205,23 +205,46 @@ async function startScanner(){
         const s = matchedDoc.data();
         // save attendance under siswa doc
         try{
-          await addDoc(collection(db, 'users', currentUser.uid, 'siswa', matchedDoc.id, 'absensi'), { waktu: new Date(), status: 'Hadir' });
-        }catch(err){ console.error('save absen err', err); }
-        // toast success (do not stop scanner)
-        showToast('Scan berhasil: '+s.nama, {type:'success', duration:2500});
-        // update small absensi table immediately (prepend)
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${s.nama}</td><td>${s.kelas}</td><td>${s.sekolah}</td><td>${new Date().toLocaleString()}</td>`;
-        absensiScanTableBody.prepend(tr);
-      } else {
-        showToast('QR tidak dikenali', {type:'danger', duration:2500});
-      }
-    },
-    (error)=>{ /* scan failure per frame — ignore */ }
-  ).catch(err=>{
-    console.error('start scanner err', err);
-    showToast('Gagal membuka kamera: '+err.message, {type:'danger'});
+         // 🔽 Simpan absensi ke Firestore (cek double dulu)
+const absensiCol = collection(db, "users", currentUser.uid, "siswa", doc.id, "absensi");
+
+// Batas awal & akhir hari (untuk filter tanggal)
+const now = new Date();
+const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+// Query absensi hari ini
+const qAbsensi = query(absensiCol,
+  where("waktu", ">=", startOfDay),
+  where("waktu", "<=", endOfDay)
+);
+
+const snapAbsensi = await getDocs(qAbsensi);
+
+if (!snapAbsensi.empty) {
+  // Sudah ada absen hari ini
+  showToast(`⚠️ ${s.nama} sudah absen hari ini`, "warning");
+} else {
+  // Belum ada, simpan baru
+  await addDoc(absensiCol, {
+    waktu: now,
+    status: "Hadir"
   });
+
+  showToast(`✅ Scan berhasil: ${s.nama} (${s.kelas} - ${s.sekolah})`, "success");
+
+  // Tambahkan ke tabel realtime (langsung terlihat di bawah kamera)
+  const absenTable = document.getElementById("absensiScanTableBody");
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${s.nama}</td>
+    <td>${s.kelas}</td>
+    <td>${s.sekolah}</td>
+    <td>${now.toLocaleString()}</td>
+  `;
+  absenTable.prepend(tr);
+}
+          
 }
 
 // Load full absensi (all siswa -> their absensi subcollection)
