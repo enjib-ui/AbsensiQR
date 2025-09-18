@@ -3,63 +3,50 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Aplikasi Absensi Guru - Firebase (Light)</title>
+  <title>Aplikasi Absensi Guru - Firebase (Responsive Mobile Drawer)</title>
   <link rel="stylesheet" href="style.css">
-  <!-- QR & scanner & PDF libs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <!-- AUTH WRAP -->
     <div id="auth-wrap" class="card auth-card">
       <h2>Aplikasi Absensi Guru</h2>
       <div class="switch">
         <button id="btn-login" class="tab active">Login</button>
         <button id="btn-register" class="tab">Daftar</button>
       </div>
-
       <form id="form-login" class="form">
         <label>Email<input id="login-email" type="email" required /></label>
         <label>Password<input id="login-password" type="password" required /></label>
-        <div class="row">
-          <button type="submit" class="btn primary">Masuk</button>
-        </div>
+        <div class="row"><button type="submit" class="btn primary">Masuk</button></div>
         <div id="login-msg" class="muted"></div>
       </form>
-
       <form id="form-register" class="form" style="display:none">
         <label>Nama Lengkap<input id="reg-nama" required /></label>
         <label>Email<input id="reg-email" type="email" required /></label>
         <label>Password<input id="reg-password" type="password" required /></label>
-        <div class="row">
-          <button type="submit" class="btn primary">Daftar</button>
-        </div>
+        <div class="row"><button type="submit" class="btn primary">Daftar</button></div>
         <div id="reg-msg" class="muted"></div>
       </form>
     </div>
 
-    <!-- DASHBOARD -->
     <div id="dashboard" class="dashboard" style="display:none">
-      <aside class="sidebar card">
-        <div class="sidebar-top">
-          <h3 id="user-email">Guru</h3>
-        </div>
+      <button id="menu-toggle" class="menu-toggle">☰</button>
+      <aside class="sidebar card" id="sidebar">
+        <div class="sidebar-top"><h3 id="user-email">Guru</h3></div>
         <nav class="menu">
           <button id="menu-tambah" class="menu-btn active">Tambah Siswa</button>
           <button id="menu-scan" class="menu-btn">Scan QR</button>
           <button id="menu-absensi" class="menu-btn">Daftar Absensi</button>
         </nav>
-
         <div class="sidebar-actions">
           <button id="btn-export-pdf" class="btn outline">Ekspor PDF</button>
           <button id="btn-logout" class="btn danger">Keluar</button>
         </div>
       </aside>
-
       <main class="content card">
-        <!-- Tambah siswa -->
         <section id="panel-tambah" class="panel">
           <h2>Tambah Siswa</h2>
           <form id="form-siswa" class="form">
@@ -68,30 +55,22 @@
               <label>Kelas<input id="siswa-kelas" required /></label>
               <label>Sekolah<input id="siswa-sekolah" required /></label>
             </div>
-            <div class="row">
-              <button type="submit" class="btn primary">Tambah Siswa</button>
-            </div>
+            <div class="row"><button type="submit" class="btn primary">Tambah Siswa</button></div>
           </form>
-
           <h3>Daftar Siswa</h3>
           <div class="table-wrap">
             <table id="tabel-siswa">
-              <thead>
-                <tr><th>Kode</th><th>Nama</th><th>Kelas</th><th>Sekolah</th><th>QR</th></tr>
-              </thead>
+              <thead><tr><th>Kode</th><th>Nama</th><th>Kelas</th><th>Sekolah</th><th>QR</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
         </section>
-
-        <!-- Scan QR -->
         <section id="panel-scan" class="panel" style="display:none">
           <h2>Scan QR Siswa</h2>
           <div class="scanner-wrap card-light">
             <div id="qr-reader"></div>
             <div id="scan-result" class="muted" style="margin-top:8px"></div>
           </div>
-
           <h3>Absensi Terbaru</h3>
           <div class="table-wrap">
             <table id="absensiScanTable">
@@ -100,8 +79,6 @@
             </table>
           </div>
         </section>
-
-        <!-- Daftar Absensi (full) -->
         <section id="panel-absensi" class="panel" style="display:none">
           <h2>Daftar Absensi (Semua)</h2>
           <div class="table-wrap">
@@ -114,11 +91,7 @@
       </main>
     </div>
   </div>
-
-  <!-- Toast container -->
   <div id="toast-container" class="toast-container"></div>
-
-  <!-- App script (module) -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
